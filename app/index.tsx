@@ -1,5 +1,6 @@
 import { colorByTypes } from "@/utils/colorsByTypes";
 import axios from "axios";
+import { Link } from "expo-router";
 import { useEffect, useState } from "react";
 import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
 
@@ -55,49 +56,61 @@ export default function Index() {
 
   if (pokemonData.length === 0) {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <Text>Loading Pokémon...</Text>
+      <View style={loadingStyles.container}>
+        <Text style={loadingStyles.text}>Catching Pokémon...</Text>
       </View>
     );
   }
 
   return (
     <ScrollView
+      style={{
+        flex: 1,
+        backgroundColor: "#10131A",
+      }}
       contentContainerStyle={{
-        gap: 16,
         padding: 16,
+        gap: 16,
       }}
     >
       {pokemonData.map((poke) => (
-        <View
+        <Link
           key={poke.name}
-          style={{
-            padding: 15,
-            // borderBottomWidth: 1,
-            // borderBottomColor: "white",
-            borderRadius: 12,
-            backgroundColor: colorByTypes[poke.types[0].type.name] + 60,
+          href={{
+            pathname: "/details",
+            params: { name: poke.name },
           }}
+          asChild
         >
-          <Text style={styles.name}>{poke.name}</Text>
-          <Text style={styles.type}>{poke.types[0].type.name}</Text>
-          <View style={styles.imageContainer}>
-            <Image
-              source={{ uri: poke.frontShinyImgURL }}
-              style={{ width: 120, height: 120 }}
-            />
-            <Image
-              source={{ uri: poke.backShinyImgURL }}
-              style={{ width: 120, height: 120 }}
-            />
+          <View
+            style={[
+              styles.card,
+              {
+                backgroundColor:
+                  colorByTypes[poke.types[0].type.name] ?? "#777",
+              },
+            ]}
+          >
+            <View style={styles.cardContent}>
+              <View>
+                <Text style={styles.cardName}>{poke.name.toUpperCase()}</Text>
+
+                <View style={styles.badges}>
+                  {poke.types.map((type) => (
+                    <View key={type.type.name} style={styles.badge}>
+                      <Text style={styles.badgeText}>{type.type.name}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+
+              <Image
+                source={{ uri: poke.frontShinyImgURL }}
+                style={styles.cardImage}
+              />
+            </View>
           </View>
-        </View>
+        </Link>
       ))}
     </ScrollView>
   );
@@ -117,5 +130,62 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 14,
     fontWeight: "400",
+  },
+  card: {
+    borderRadius: 24,
+    padding: 20,
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+  },
+
+  cardContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  cardName: {
+    color: "white",
+    fontSize: 24,
+    fontWeight: "800",
+  },
+
+  cardImage: {
+    width: 120,
+    height: 120,
+  },
+
+  badges: {
+    marginTop: 10,
+    gap: 8,
+  },
+
+  badge: {
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(255,255,255,0.25)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+
+  badgeText: {
+    color: "white",
+    fontWeight: "600",
+  },
+});
+
+const loadingStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#10131A",
+  },
+  text: {
+    color: "white",
+    fontSize: 20,
+    fontWeight: "700",
   },
 });
