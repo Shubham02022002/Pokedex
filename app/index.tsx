@@ -1,16 +1,30 @@
+import { colorByTypes } from "@/utils/colorsByTypes";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
 
-interface Pokemon {
+interface basePoke {
   name: string;
-  frontImageURL: string;
-  backImageURL: string;
+  url: string;
+}
+
+interface detailedPokemon {
+  name: string;
+  frontShinyImgURL: string;
+  backShinyImgURL: string;
+  types: PokemonType[];
+}
+
+interface PokemonType {
+  type: {
+    name: string;
+    url: string;
+  };
 }
 
 export default function Index() {
-  const [pokemonData, setPokemonData] = useState<Pokemon[]>([]);
-
+  const [pokemonData, setPokemonData] = useState<detailedPokemon[]>([]);
+  // console.log(JSON.stringify(pokemonData[0]));
   useEffect(() => {
     getPokeData();
   }, []);
@@ -20,13 +34,14 @@ export default function Index() {
       const response = await axios.get("https://pokeapi.co/api/v2/pokemon/");
 
       const fetchedPokemon = await Promise.all(
-        response.data.results.map(async (item: any) => {
-          const singleData = await axios.get(item.url);
-
+        response.data.results.map(async (item: basePoke) => {
+          const { data } = await axios.get(item.url);
+          // console.log(item.infoURL);
           return {
-            name: singleData.data.forms[0].name,
-            backImageURL: singleData.data.sprites.back_default,
-            frontImageURL: singleData.data.sprites.front_default,
+            name: data.forms[0].name,
+            backShinyImgURL: data.sprites.back_shiny ?? "",
+            frontShinyImgURL: data.sprites.front_shiny ?? "",
+            types: data.types,
           };
         }),
       );
@@ -53,27 +68,33 @@ export default function Index() {
   }
 
   return (
-    <ScrollView>
+    <ScrollView
+      contentContainerStyle={{
+        gap: 16,
+        padding: 16,
+      }}
+    >
       {pokemonData.map((poke) => (
         <View
           key={poke.name}
           style={{
-            padding: 10,
-            borderBottomWidth: 1,
-            borderBottomColor: "#ccc",
+            padding: 15,
+            // borderBottomWidth: 1,
+            // borderBottomColor: "white",
+            borderRadius: 12,
+            backgroundColor: colorByTypes[poke.types[0].type.name] + 60,
           }}
         >
-          <Text>{poke.name}</Text>
+          <Text style={styles.name}>{poke.name}</Text>
+          <Text style={styles.type}>{poke.types[0].type.name}</Text>
           <View style={styles.imageContainer}>
             <Image
-              source={{ uri: poke.frontImageURL }}
-              height={100}
-              width={100}
+              source={{ uri: poke.frontShinyImgURL }}
+              style={{ width: 120, height: 120 }}
             />
             <Image
-              source={{ uri: poke.backImageURL }}
-              height={100}
-              width={100}
+              source={{ uri: poke.backShinyImgURL }}
+              style={{ width: 120, height: 120 }}
             />
           </View>
         </View>
@@ -84,7 +105,17 @@ export default function Index() {
 
 const styles = StyleSheet.create({
   imageContainer: {
-    // flex: 1,
+    justifyContent: "space-between",
     flexDirection: "row",
+  },
+  name: {
+    textAlign: "center",
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  type: {
+    textAlign: "center",
+    fontSize: 14,
+    fontWeight: "400",
   },
 });
