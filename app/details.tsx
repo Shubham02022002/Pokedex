@@ -1,22 +1,9 @@
+import { DetailedPokemon } from "@/types";
 import { colorByTypes } from "@/utils/colorsByTypes";
 import axios from "axios";
 import { Stack, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
-
-interface PokemonType {
-  type: {
-    name: string;
-    url: string;
-  };
-}
-
-interface DetailedPokemon {
-  name: string;
-  frontShinyImgURL: string;
-  backShinyImgURL: string;
-  types: PokemonType[];
-}
 
 const Details = () => {
   const [pokemonDetails, setPokemonDetails] = useState<DetailedPokemon | null>(

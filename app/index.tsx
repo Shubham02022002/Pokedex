@@ -1,30 +1,12 @@
+import { basePoke, DetailedPokemon } from "@/types";
 import { colorByTypes } from "@/utils/colorsByTypes";
 import axios from "axios";
 import { Link } from "expo-router";
 import { useEffect, useState } from "react";
 import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
 
-interface basePoke {
-  name: string;
-  url: string;
-}
-
-interface detailedPokemon {
-  name: string;
-  frontShinyImgURL: string;
-  backShinyImgURL: string;
-  types: PokemonType[];
-}
-
-interface PokemonType {
-  type: {
-    name: string;
-    url: string;
-  };
-}
-
 export default function Index() {
-  const [pokemonData, setPokemonData] = useState<detailedPokemon[]>([]);
+  const [pokemonData, setPokemonData] = useState<DetailedPokemon[]>([]);
   // console.log(JSON.stringify(pokemonData[0]));
   useEffect(() => {
     getPokeData();
