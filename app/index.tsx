@@ -2,172 +2,188 @@ import { basePoke, DetailedPokemon } from "@/types";
 import { colorByTypes } from "@/utils/colorsByTypes";
 import axios from "axios";
 import { Link } from "expo-router";
-import { useEffect, useState } from "react";
-import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 export default function Index() {
   const [pokemonData, setPokemonData] = useState<DetailedPokemon[]>([]);
-  // console.log(JSON.stringify(pokemonData[0]));
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
   useEffect(() => {
     getPokeData();
   }, []);
 
   const getPokeData = async () => {
     try {
-      const response = await axios.get("https://pokeapi.co/api/v2/pokemon/");
+      setIsLoading(true);
+      const response = await axios.get(
+        "https://pokeapi.co/api/v2/pokemon/?limit=20",
+      );
 
       const fetchedPokemon = await Promise.all(
         response.data.results.map(async (item: basePoke) => {
           const { data } = await axios.get(item.url);
-          // console.log(item.infoURL);
           return {
-            name: data.forms[0].name,
+            name: data.name,
             backShinyImgURL: data.sprites.back_shiny ?? "",
             frontShinyImgURL: data.sprites.front_shiny ?? "",
             types: data.types,
+            highResImage:
+              data.sprites.other["official-artwork"].front_default ||
+              data.sprites.front_default,
           };
         }),
       );
 
       setPokemonData(fetchedPokemon);
-      // console.log(fetchedPokemon);
     } catch (error) {
       console.log("Error fetching Pokémon:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  if (pokemonData.length === 0) {
+  if (isLoading) {
     return (
-      <View style={loadingStyles.container}>
-        <Text style={loadingStyles.text}>Catching Pokémon...</Text>
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+        <Text style={styles.loadingText}>Catching Pokémon...</Text>
       </View>
     );
   }
 
   return (
     <ScrollView
-      style={{
-        flex: 1,
-        backgroundColor: "#10131A",
-      }}
-      contentContainerStyle={{
-        padding: 16,
-        gap: 16,
-      }}
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
     >
-      {pokemonData.map((poke) => (
-        <Link
-          key={poke.name}
-          href={{
-            pathname: "/details",
-            params: { name: poke.name },
-          }}
-          asChild
-        >
-          <View
-            style={[
-              styles.card,
-              {
-                backgroundColor:
-                  colorByTypes[poke.types[0].type.name] ?? "#777",
-              },
-            ]}
+      <Text style={styles.appTitle}>Pokédex</Text>
+
+      {pokemonData.map((poke) => {
+        const primaryType = poke.types[0]?.type.name ?? "normal";
+        const cardColor = colorByTypes[primaryType] ?? "#777";
+
+        return (
+          <Link
+            key={poke.name}
+            href={{
+              pathname: "/details",
+              params: { name: poke.name },
+            }}
+            asChild
           >
-            <View style={styles.cardContent}>
-              <View>
-                <Text style={styles.cardName}>{poke.name.toUpperCase()}</Text>
+            <View style={[styles.card, { backgroundColor: cardColor }]}>
+              <View style={styles.cardContent}>
+                <View style={styles.infoColumn}>
+                  <Text style={styles.cardName}>{poke.name}</Text>
 
-                <View style={styles.badges}>
-                  {poke.types.map((type) => (
-                    <View key={type.type.name} style={styles.badge}>
-                      <Text style={styles.badgeText}>{type.type.name}</Text>
-                    </View>
-                  ))}
+                  <View style={styles.badgesRow}>
+                    {poke.types.map((type) => (
+                      <View key={type.type.name} style={styles.badge}>
+                        <Text style={styles.badgeText}>{type.type.name}</Text>
+                      </View>
+                    ))}
+                  </View>
                 </View>
-              </View>
 
-              <Image
-                source={{ uri: poke.frontShinyImgURL }}
-                style={styles.cardImage}
-              />
+                <Image
+                  source={{
+                    uri: (poke as any).highResImage || poke.frontShinyImgURL,
+                  }}
+                  style={styles.cardImage}
+                  resizeMode="contain"
+                />
+              </View>
             </View>
-          </View>
-        </Link>
-      ))}
+          </Link>
+        );
+      })}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  imageContainer: {
-    justifyContent: "space-between",
-    flexDirection: "row",
+  container: {
+    flex: 1,
+    backgroundColor: "#10131A",
   },
-  name: {
-    textAlign: "center",
-    fontSize: 20,
-    fontWeight: "bold",
+  scrollContent: {
+    padding: 20,
+    paddingTop: 60,
+    gap: 16,
   },
-  type: {
-    textAlign: "center",
-    fontSize: 14,
-    fontWeight: "400",
+  centerContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#10131A",
+    gap: 12,
+  },
+  loadingText: {
+    color: "#9CA3AF",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  appTitle: {
+    fontSize: 32,
+    fontWeight: "900",
+    color: "#FFF",
+    marginBottom: 10,
+    letterSpacing: -0.5,
   },
   card: {
-    borderRadius: 24,
-    padding: 20,
-    elevation: 8,
+    borderRadius: 20,
+    padding: 16,
+    overflow: "hidden",
     shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 4,
   },
-
   cardContent: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-
-  cardName: {
-    color: "white",
-    fontSize: 24,
-    fontWeight: "800",
-  },
-
-  cardImage: {
-    width: 120,
-    height: 120,
-  },
-
-  badges: {
-    marginTop: 10,
-    gap: 8,
-  },
-
-  badge: {
-    alignSelf: "flex-start",
-    backgroundColor: "rgba(255,255,255,0.25)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-
-  badgeText: {
-    color: "white",
-    fontWeight: "600",
-  },
-});
-
-const loadingStyles = StyleSheet.create({
-  container: {
+  infoColumn: {
     flex: 1,
     justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#10131A",
   },
-  text: {
-    color: "white",
-    fontSize: 20,
+  cardName: {
+    color: "#FFF",
+    fontSize: 24,
+    fontWeight: "800",
+    textTransform: "capitalize",
+    letterSpacing: -0.5,
+  },
+  badgesRow: {
+    flexDirection: "row",
+    gap: 6,
+    marginTop: 10,
+  },
+  badge: {
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  badgeText: {
+    color: "#FFF",
     fontWeight: "700",
+    fontSize: 12,
+    textTransform: "capitalize",
+  },
+  cardImage: {
+    width: 100,
+    height: 100,
   },
 });
