@@ -1,17 +1,28 @@
-import { DetailedPokemon } from "@/types";
+import { EnhancedPokemon } from "@/types";
 import { colorByTypes } from "@/utils/colorsByTypes";
 import axios from "axios";
 import { Stack, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
+import {
+  PokemonHeader,
+  PokemonHero,
+  PokemonMetrics,
+  PokemonSprites,
+  PokemonStats,
+} from "../components/Pokemon";
 
 const Details = () => {
-  const [pokemonDetails, setPokemonDetails] = useState<DetailedPokemon | null>(
-    null,
-  );
+  const [pokemon, setPokemon] = useState<EnhancedPokemon | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const params = useLocalSearchParams();
-  const primaryType = pokemonDetails?.types[0]?.type.name ?? "normal";
   const name = Array.isArray(params.name) ? params.name[0] : params.name;
 
   useEffect(() => {
@@ -22,154 +33,102 @@ const Details = () => {
 
   const getPokemonDetailsByName = async (pokemonName: string) => {
     try {
+      setIsLoading(true);
       const response = await axios.get(
         `https://pokeapi.co/api/v2/pokemon/${pokemonName}`,
       );
-
       const details = response.data;
 
-      const pokeDetails: DetailedPokemon = {
-        name: details.forms[0].name,
+      const mappedStats = details.stats.map((s: any) => ({
+        name: s.stat.name.replace("special-", "Sp. "),
+        value: s.base_stat,
+      }));
+
+      setPokemon({
+        id: details.id,
+        name: details.name,
         frontShinyImgURL: details.sprites.front_shiny,
         backShinyImgURL: details.sprites.back_shiny,
         types: details.types,
-      };
-
-      setPokemonDetails(pokeDetails);
+        height: details.height / 10,
+        weight: details.weight / 10,
+        highResImage:
+          details.sprites.other["official-artwork"].front_default ||
+          details.sprites.front_default,
+        stats: mappedStats,
+      });
     } catch (e) {
       console.log("Error fetching Pokémon details:", e);
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  const primaryType = pokemon?.types[0]?.type.name ?? "normal";
+  const typeColor = colorByTypes[primaryType] ?? "#666";
+
+  if (isLoading) {
+    return (
+      <View style={[styles.centerContainer, { backgroundColor: "#F8F9FA" }]}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
+
   return (
-    <>
+    <SafeAreaView style={styles.container}>
       <Stack.Screen
         options={{
-          title: pokemonDetails?.name,
+          headerTransparent: true,
+          headerTitle: "",
+          headerTintColor: "#111827",
         }}
       />
 
       <ScrollView
-        style={{
-          flex: 1,
-          backgroundColor: colorByTypes[primaryType] ?? "#666",
-        }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
       >
-        <View style={styles.hero}>
-          <Text style={styles.heroTitle}>
-            {pokemonDetails?.name.toUpperCase()}
-          </Text>
+        <PokemonHeader
+          id={pokemon?.id}
+          name={pokemon?.name}
+          types={pokemon?.types}
+          typeColor={typeColor}
+        />
+        <PokemonHero image={pokemon?.highResImage} typeColor={typeColor} />
 
-          <Image
-            source={{
-              uri: pokemonDetails?.frontShinyImgURL,
-            }}
-            style={styles.heroImage}
+        <View style={styles.dashboardGrid}>
+          <PokemonMetrics height={pokemon?.height} weight={pokemon?.weight} />
+          <PokemonStats stats={pokemon?.stats} typeColor={typeColor} />
+          <PokemonSprites
+            front={pokemon?.frontShinyImgURL}
+            back={pokemon?.backShinyImgURL}
           />
         </View>
-
-        <View style={styles.contentCard}>
-          <Text style={styles.sectionTitle}>Pokémon Types</Text>
-
-          <View style={styles.typesRow}>
-            {pokemonDetails?.types.map((type) => (
-              <View key={type.type.name} style={styles.typeChip}>
-                <Text style={styles.typeText}>{type.type.name}</Text>
-              </View>
-            ))}
-          </View>
-
-          <Text style={styles.sectionTitle}>Sprites</Text>
-
-          <View style={styles.spriteContainer}>
-            <Image
-              source={{
-                uri: pokemonDetails?.frontShinyImgURL,
-              }}
-              style={styles.sprite}
-            />
-
-            <Image
-              source={{
-                uri: pokemonDetails?.backShinyImgURL,
-              }}
-              style={styles.sprite}
-            />
-          </View>
-        </View>
       </ScrollView>
-    </>
+    </SafeAreaView>
   );
 };
 
 export default Details;
 
 const styles = StyleSheet.create({
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
+  container: {
+    flex: 1,
+    backgroundColor: "#F8F9FA",
   },
-  heading: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  hero: {
+  centerContainer: {
+    flex: 1,
+    justifyContent: "center",
     alignItems: "center",
-    paddingTop: 40,
-    paddingBottom: 20,
   },
-
-  heroTitle: {
-    color: "white",
-    fontSize: 32,
-    fontWeight: "900",
+  scrollContent: {
+    paddingTop: 80,
+    paddingBottom: 40,
   },
-
-  heroImage: {
-    width: 220,
-    height: 220,
-  },
-
-  contentCard: {
-    backgroundColor: "white",
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    padding: 24,
-    minHeight: 500,
-  },
-
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    marginBottom: 12,
-  },
-
-  typesRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    marginBottom: 30,
-  },
-
-  typeChip: {
-    backgroundColor: "#EFEFEF",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-
-  typeText: {
-    fontWeight: "700",
-  },
-
-  spriteContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-  },
-
-  sprite: {
-    width: 140,
-    height: 140,
+  dashboardGrid: {
+    paddingHorizontal: 24,
+    marginTop: 20,
+    gap: 16,
   },
 });
